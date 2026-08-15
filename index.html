@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Menu Treatment</title>
+  
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Library JS Page-Flip -->
+  <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.js"></script>
+
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #F9F8FE;
+      font-family: sans-serif;
+      touch-action: manipulation;
+    }
+    .viewport-container {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+    #flipbook-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+    }
+    .page-sheet {
+      background-color: #FFFFFF;
+      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    }
+    .page-sheet img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      user-select: none;
+      -webkit-user-drag: none;
+      transition: opacity 0.3s ease-in-out;
+    }
+  </style>
+</head>
+<body class="relative flex flex-col justify-between select-none">
+
+  <!-- AUDIO ELEMENT BACKGROUND MUSIC (ATRIBUT LOOP DIHAPUS) -->
+  <audio id="bg-music" preload="auto">
+    <source src="musik/background.mp3" type="audio/mpeg">
+  </audio>
+
+  <!-- LOGO TOP-LEFT -->
+  <div class="fixed top-7 left-5 flex items-center justify-center z-50">
+    <img 
+      src="https://lh3.googleusercontent.com/pw/AP1GczMhuy_9phZ20bCDqnf0TIdGKjy5XsVJ8V3VFgLL9PzunJfzWMCJ06hmADEs6Ts9qyDKGg8yZkqnkqbKh-F7ijyAo8xId8lKTZ8lrryulJ5SBeNE63sOvo3tlhJMCxXkflZMPS_pczo3lE6kUimGchf_=w1920-h405-s-no-gm?authuser=0" 
+      alt="Logo" 
+      class="h-7 sm:h-9 w-auto object-contain pointer-events-none"
+    />
+  </div>
+
+  <!-- FLOATING NAVBAR TOP-RIGHT (KONTROL MUSIK MANUAL) -->
+  <div class="fixed top-5 right-5 bg-[#F9F8FE] backdrop-blur-md px-4 py-2.5 rounded-full flex items-center justify-center text-[#81929F] text-lg z-50 border border-[#81929F]">
+    <button onclick="toggleMusic()" class="hover:text-[#009D7B] active:scale-90 transition flex items-center gap-2 cursor-pointer">
+      <i id="music-icon" class="fas fa-volume-xmark text-[#81929F]"></i>
+      <span id="music-text" class="text-xs font-semibold pr-1">Musik: OFF</span>
+    </button>
+  </div>
+
+  <!-- AREA UTAMA DISPLAY MENU TREATMENT -->
+  <div class="viewport-container">
+    <div id="flipbook-wrapper">
+      <div id="flipbook"></div>
+    </div>
+  </div>
+
+  <!-- FLOATING NAVBAR BOTTOM (NAVIGASI) -->
+  <div class="fixed bottom-5 left-1/2 -translate-x-1/2 flex items-center text-[#81929F] text-lg z-50">
+    <button onclick="flipPrev()" class="bg-[#F9F8FE] backdrop-blur-md px-5 py-2.5 rounded-full border border-[#81929F] hover:text-[#009D7B] active:scale-90 transition p-1">
+      <i class="fas fa-chevron-left"></i>
+    </button>
+    <span class="text-xs font-semibold tracking-wider select-none px-2" id="page-num">1 / 12</span>
+    <button onclick="flipNext()" class="bg-[#F9F8FE] backdrop-blur-md px-5 py-2.5 rounded-full border border-[#81929F] hover:text-[#009D7B] active:scale-90 transition p-1">
+      <i class="fas fa-chevron-right"></i>
+    </button>
+  </div>
+
+  <script>
+    let pageFlip;
+
+    const TOTAL_PAGES = 12;
+    const PRELOAD_BUFFER = 4;
+    const BLANK_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 766'%3E%3C/svg%3E";
+
+    // ELEMEN & PENANDA STATUS MUSIK
+    const bgMusic = document.getElementById('bg-music');
+    const musicIcon = document.getElementById('music-icon');
+    const musicText = document.getElementById('music-text');
+    let isMusicPlaying = false;
+    let hasPlayedFirstTime = false;
+
+    // EVENT SAAT MUSIK HABIS DIPUTAR (BERHENTI OTOMATIS DAN RESET TOMBOL)
+    bgMusic.addEventListener('ended', function() {
+      isMusicPlaying = false;
+      musicIcon.className = "fas fa-volume-xmark text-[#81929F]";
+      musicText.innerText = "Musik: OFF";
+    });
+
+    // FUNGSI MEMUTAR MUSIK PERTAMA KALI SAAT INTERAKSI TOMBOL
+    function playMusicOnFirstClick() {
+      if (!hasPlayedFirstTime && !isMusicPlaying) {
+        hasPlayedFirstTime = true; // Langsung kunci agar tidak dipanggil lagi
+        bgMusic.play().then(() => {
+          musicIcon.className = "fas fa-volume-high text-[#009D7B] animate-pulse";
+          musicText.innerText = "Musik: ON";
+          isMusicPlaying = true;
+        }).catch(err => {
+          console.log("Gagal memutar musik:", err);
+          hasPlayedFirstTime = false;
+        });
+      }
+    }
+
+    // FUNGSI TOGGLE PLAY / PAUSE MANUAL LEWAT TOMBOL TOP-RIGHT
+    function toggleMusic() {
+      hasPlayedFirstTime = true;
+
+      if (isMusicPlaying) {
+        bgMusic.pause();
+        musicIcon.className = "fas fa-volume-xmark text-[#81929F]";
+        musicText.innerText = "Musik: OFF";
+        isMusicPlaying = false;
+      } else {
+        bgMusic.play().then(() => {
+          musicIcon.className = "fas fa-volume-high text-[#009D7B] animate-pulse";
+          musicText.innerText = "Musik: ON";
+          isMusicPlaying = true;
+        }).catch(err => {
+          console.log("Gagal memutar musik:", err);
+        });
+      }
+    }
+
+    // 1. FUNGSI OPTIMASI LAZY LOADING GAMBAR
+    function loadAheadImages(currentPageIndex) {
+      const startIdx = currentPageIndex;
+      const endIdx = Math.min(currentPageIndex + PRELOAD_BUFFER, TOTAL_PAGES - 1);
+
+      for (let i = startIdx; i <= endIdx; i++) {
+        const img = document.getElementById(`img-page-${i + 1}`);
+        if (img && img.getAttribute('data-src')) {
+          img.src = img.getAttribute('data-src');
+          img.removeAttribute('data-src');
+        }
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const flipbookContainer = document.getElementById('flipbook');
+
+      // GENERATE DINAMIS ELEMEN 81 HALAMAN
+      for (let i = 1; i <= TOTAL_PAGES; i++) {
+        const pageSheet = document.createElement('div');
+        pageSheet.className = 'page-sheet';
+
+        const img = document.createElement('img');
+        img.id = `img-page-${i}`;
+        img.setAttribute('data-src', `menu/Menu-${i}.jpg`);
+        img.src = BLANK_PLACEHOLDER;
+        img.alt = `Halaman Treatment ${i}`;
+
+        pageSheet.appendChild(img);
+        flipbookContainer.appendChild(pageSheet);
+      }
+
+      loadAheadImages(0);
+
+      // INISIALISASI ST.PAGEFLIP
+      pageFlip = new St.PageFlip(flipbookContainer, {
+        width: 540,
+        height: 746,
+        size: "stretch",
+        minWidth: 270,
+        maxWidth: 1080,
+        minHeight: 373,
+        maxHeight: 1491,
+        drawShadow: true,
+        showCover: true,
+        mobileScrollSupport: false,
+        clickToFlip: false,
+        swipeDistance: 99999
+      });
+
+      pageFlip.loadFromHTML(document.querySelectorAll('.page-sheet'));
+
+      pageFlip.on('flip', (e) => {
+        const total = pageFlip.getPageCount();
+        const currentIdx = e.data;
+        document.getElementById('page-num').innerText = `${currentIdx + 1} / ${total}`;
+
+        loadAheadImages(currentIdx);
+      });
+    });
+
+    // 2. FUNGSI NAVIGASI PEMBALIK HALAMAN VIA TOMBOL GUI
+    function flipPrev() {
+      playMusicOnFirstClick();
+      if (pageFlip) pageFlip.flipPrev();
+    }
+
+    function flipNext() {
+      playMusicOnFirstClick();
+      if (pageFlip) pageFlip.flipNext();
+    }
+  </script>
+</body>
+</html>
